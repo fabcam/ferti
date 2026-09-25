@@ -7,7 +7,7 @@ import Mapa from '../components/Mapa'
 import Reproductor from '../components/Reproductor'
 import Compartir from '../components/Compartir'
 import { paqueteAplicacion } from '../lib/intercambio'
-import { CapaAplicacion } from '../lib/aplicacion'
+import { CapaAplicacion, metrosPorPixel } from '../lib/aplicacion'
 import { Cobertura, formatearPorcentaje, type Resaltado, type ResumenCobertura } from '../lib/cobertura'
 import {
   acumular,
@@ -24,6 +24,7 @@ import {
 import { mensajeErrorGps } from '../lib/gps'
 import { useWakeLock } from '../lib/wakeLock'
 import { avisar } from '../lib/sonido'
+import { calcularGuias, largosDeLados } from '../lib/guias'
 import { formatearFecha } from '../lib/dispositivo'
 
 const ZOOM_GRABANDO = 18
@@ -63,6 +64,7 @@ export default function AplicacionPage() {
   const [resaltado, setResaltado] = useState<Resaltado>('nada')
   const [reproduciendo, setReproduciendo] = useState(false)
   const [retomadaEnPausa, setRetomadaEnPausa] = useState(false)
+  const [eligiendoGuia, setEligiendoGuia] = useState(false)
 
   const { estado: wake, pedir: pedirWakeLock } = useWakeLock(grabando)
 
@@ -77,6 +79,10 @@ export default function AplicacionPage() {
   const dibujadoRef = useRef(-1) // último índice dibujado durante la reproducción
 
   const alListo = useCallback((map: L.Map) => {
+    // Las guías van por encima de las franjas pintadas y debajo del vehículo.
+    map.createPane('guias').style.zIndex = '450'
+    map.getPane('guias')!.style.pointerEvents = 'none'
+    map.createPane('ladosGuia').style.zIndex = '460'
     setMapa(map)
     map.on('dragstart', () => setSiguiendo(false))
     return () => setMapa(null)
@@ -94,6 +100,64 @@ export default function AplicacionPage() {
       forma.remove()
     }
   }, [mapa, chacra])
+
+  // Líneas guía paralelas al lado elegido.
+  const lado = app?.guiaLado
+  useEffect(() => {
+    if (!mapa || !chacra || !app || lado == null || eligiendoGuia) return
+    const fuertes = L.layerGroup()
+    const claras = L.layerGroup()
+    for (const linea of calcularGuias(chacra.poligono, lado, app.anchoM)) {
+      const estilo: L.PolylineOptions =
+        linea.tipo === 'fuerte'
+          ? { pane: 'guias', color: '#ffffff', weight: 3, opacity: 0.95, interactive: false }
+          : { pane: 'guias', color: '#ffffff', weight: 2, opacity: 0.5, dashArray: '8 8', interactive: false }
+      for (const tramo of linea.tramos) L.polyline(tramo, estilo).addTo(linea.tipo === 'fuerte' ? fuertes : claras)
+    }
+    // De lejos las líneas se amontonan y tapan todo: se muestran solo si quedan bien separadas.
+    const SEPARACION_MIN_PX = 10
+    const ajustar = () => {
+      const px = app.anchoM / metrosPorPixel(mapa.getCenter().lat, mapa.getZoom())
+      const mostrar = (g: L.LayerGroup, ok: boolean) => (ok ? g.addTo(mapa) : g.remove())
+      mostrar(fuertes, 2 * px >= SEPARACION_MIN_PX)
+      mostrar(claras, px >= SEPARACION_MIN_PX)
+    }
+    ajustar()
+    mapa.on('zoomend', ajustar)
+    return () => {
+      mapa.off('zoomend', ajustar)
+      fuertes.remove()
+      claras.remove()
+    }
+  }, [mapa, chacra, app?.anchoM, lado, eligiendoGuia]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Elegir el lado: cada lado del límite se vuelve tocable y muestra su largo.
+  useEffect(() => {
+    if (!mapa || !chacra || !app || !eligiendoGuia) return
+    const grupo = L.layerGroup().addTo(mapa)
+    const largos = largosDeLados(chacra.poligono)
+    chacra.poligono.forEach((p, i) => {
+      const q = chacra.poligono[(i + 1) % chacra.poligono.length]
+      const elegido = i === app.guiaLado
+      L.polyline([p, q], { pane: 'ladosGuia', color: elegido ? '#4aa3ff' : '#ffd21f', weight: 22, opacity: 0.55, lineCap: 'butt' })
+        .bindTooltip(`${Math.round(largos[i])} m`, { permanent: true, direction: 'center', className: 'etiqueta-lado' })
+        .on('click', async () => {
+          await db.aplicaciones.update(app.id, { guiaLado: i })
+          setEligiendoGuia(false)
+        })
+        .addTo(grupo)
+    })
+    mapa.fitBounds(L.latLngBounds(chacra.poligono), { padding: [60, 60] })
+    setSiguiendo(false)
+    return () => {
+      grupo.remove()
+    }
+  }, [mapa, chacra, app?.id, app?.guiaLado, eligiendoGuia]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const quitarGuias = async () => {
+    if (app) await db.aplicaciones.update(app.id, { guiaLado: undefined })
+    setEligiendoGuia(false)
+  }
 
   // Otras aplicaciones de la misma chacra, de fondo (p. ej. el producto que se pasó antes).
   useEffect(() => {
@@ -458,7 +522,19 @@ export default function AplicacionPage() {
         )}
       </header>
 
-      {(alerta || (retomadaEnPausa && !esparciendo)) && (
+      {eligiendoGuia ? (
+        <div className="alertas">
+          <div className="alerta alerta-info eleccion-guia">
+            <span>Tocá el lado de la chacra al que querés las guías paralelas.</span>
+            <div>
+              {app.guiaLado != null && (
+                <button className="btn btn-chico" onClick={quitarGuias}>Quitar guías</button>
+              )}
+              <button className="btn btn-chico" onClick={() => setEligiendoGuia(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      ) : (alerta || (retomadaEnPausa && !esparciendo)) && (
         <div className="alertas">
           {retomadaEnPausa && !esparciendo && (
             <div className="alerta alerta-info">Se retomó en pausa. Si seguís aplicando, tocá Esparcir.</div>
@@ -490,6 +566,15 @@ export default function AplicacionPage() {
             aria-label="Ver toda la chacra"
           >
             ⛶
+          </button>
+        )}
+        {chacra && chacra.poligono.length >= 3 && !reproduciendo && (
+          <button
+            className={'pildora' + (app.guiaLado != null ? ' guias-activas' : '')}
+            onClick={() => setEligiendoGuia(!eligiendoGuia)}
+            aria-label="Guías paralelas"
+          >
+            Guías
           </button>
         )}
         {cobertura && (

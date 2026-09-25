@@ -22,9 +22,13 @@ todos los datos quedan guardados en el dispositivo.
 5. **+ Aplicación**: elegir producto, equipo y dosis, y **Empezar**.
 6. Con el celular en el soporte, enchufado y con la pantalla prendida:
    **▶ Esparcir** al abrir la tolva y **Pausar** en cabeceras, traslados y recargas.
-7. Abajo se ve el **% cubierto**, las hectáreas y los **solapes**. El botón **Resaltar** marca en rojo
+7. **Guías** (botón al costado del mapa): tocar un lado de la chacra y aparecen líneas paralelas a ese lado,
+   una cada ancho de trabajo, alternando **fuerte** y **clara** (carriles del doble del ancho con la clara al
+   medio). Pasando por cada línea no quedan huecos; la primera va a medio ancho del borde.
+   Se ven al acercar el mapa.
+8. Abajo se ve el **% cubierto**, las hectáreas y los **solapes**. El botón **Resaltar** marca en rojo
    donde se pasó dos veces o en rosado lo que falta.
-8. **Finalizar** al terminar. Después se puede **reproducir**, **compartir** o **reanudar**.
+9. **Finalizar** al terminar. Después se puede **reproducir**, **compartir** o **reanudar**.
 
 Importante: si se bloquea el celular o se cambia de app, **no se registra**. Si pasa, al volver la
 aplicación sigue en pausa y hay que tocar Esparcir de nuevo.

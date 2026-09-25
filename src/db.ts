@@ -53,6 +53,8 @@ export interface Aplicacion {
   estado: EstadoAplicacion
   /** Último cálculo de cobertura (para mostrar en listas sin recalcular). */
   cobertura?: ResumenCobertura
+  /** Lado del límite (índice del vértice inicial) al que se trazan las guías paralelas. */
+  guiaLado?: number
 }
 
 export interface Punto {

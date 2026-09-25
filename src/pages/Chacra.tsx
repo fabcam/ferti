@@ -10,7 +10,6 @@ import Mapa from '../components/Mapa'
 import Compartir from '../components/Compartir'
 import MapaOffline from '../components/MapaOffline'
 import { formatearFecha, formatearHa } from '../lib/dispositivo'
-import { CapaAplicacion } from '../lib/aplicacion'
 import { formatearPorcentaje } from '../lib/cobertura'
 import { paqueteChacra } from '../lib/intercambio'
 
@@ -104,20 +103,9 @@ export default function ChacraPage() {
             className="mapa-vista"
             opciones={{ dragging: false, touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false }}
             onListo={(map) => {
-              const forma = L.polygon(chacra.poligono, { color: '#ffffff', weight: 2, fill: false }).addTo(map)
+              // Solo el límite: los recorridos se ven dentro de cada aplicación.
+              const forma = L.polygon(chacra.poligono, { color: '#ffd21f', weight: 3, fillOpacity: 0.1 }).addTo(map)
               map.fitBounds(forma.getBounds(), { padding: [16, 16] })
-              let cancelado = false
-              ;(async () => {
-                const apps = await db.aplicaciones.where('chacraId').equals(id).sortBy('inicio')
-                for (const a of apps) {
-                  const puntos = await db.puntos.where('aplicacionId').equals(a.id).sortBy('t')
-                  if (cancelado) return
-                  new CapaAplicacion({ color: a.color, anchoM: a.anchoM, mostrarRecorrido: false }).addTo(map).cargar(puntos)
-                }
-              })()
-              return () => {
-                cancelado = true
-              }
             }}
           />
           <Link to={`/chacra/${id}/limite`} className="btn btn-chico vista-editar">
