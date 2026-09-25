@@ -6,11 +6,12 @@ interface Props {
   onCerrar: () => void
   onGuardar: () => void | Promise<void>
   onBorrar?: () => void | Promise<void>
+  textoGuardar?: string
   children: ReactNode
 }
 
 /** Hoja inferior con un formulario, cómoda de usar con una mano. */
-export default function Hoja({ titulo, abierta, onCerrar, onGuardar, onBorrar, children }: Props) {
+export default function Hoja({ titulo, abierta, onCerrar, onGuardar, onBorrar, textoGuardar = 'Guardar', children }: Props) {
   useEffect(() => {
     if (!abierta) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCerrar()
@@ -41,7 +42,7 @@ export default function Hoja({ titulo, abierta, onCerrar, onGuardar, onBorrar, c
             Cancelar
           </button>
           <button type="submit" className="btn btn-primario">
-            Guardar
+            {textoGuardar}
           </button>
         </div>
       </form>

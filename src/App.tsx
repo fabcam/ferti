@@ -3,6 +3,7 @@ import Inicio from './pages/Inicio'
 import ProductorPage from './pages/Productor'
 import ChacraPage from './pages/Chacra'
 import EditorLimite from './pages/EditorLimite'
+import AplicacionPage from './pages/Aplicacion'
 import Productos from './pages/Productos'
 import Equipos from './pages/Equipos'
 import Ajustes from './pages/Ajustes'
@@ -13,6 +14,7 @@ const router = createHashRouter([
   { path: '/productor/:id', element: <ProductorPage /> },
   { path: '/chacra/:id', element: <ChacraPage /> },
   { path: '/chacra/:id/limite', element: <EditorLimite /> },
+  { path: '/aplicacion/:id', element: <AplicacionPage /> },
   { path: '/productos', element: <Productos /> },
   { path: '/equipos', element: <Equipos /> },
   { path: '/ajustes', element: <Ajustes /> },
