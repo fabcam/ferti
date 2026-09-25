@@ -65,6 +65,13 @@ export default function AplicacionPage() {
   const [reproduciendo, setReproduciendo] = useState(false)
   const [retomadaEnPausa, setRetomadaEnPausa] = useState(false)
   const [eligiendoGuia, setEligiendoGuia] = useState(false)
+  // Las aplicaciones anteriores de la chacra no se muestran salvo que se pidan: si no, parece
+  // que la aplicación nueva ya viene pintada.
+  const [mostrarAnteriores, setMostrarAnteriores] = useState(false)
+  const cantidadAnteriores = useLiveQuery(
+    () => (app ? db.aplicaciones.where('chacraId').equals(app.chacraId).filter((a) => a.id !== app.id).count() : 0),
+    [app?.id, app?.chacraId],
+  )
 
   const { estado: wake, pedir: pedirWakeLock } = useWakeLock(grabando)
 
@@ -160,9 +167,9 @@ export default function AplicacionPage() {
     setEligiendoGuia(false)
   }
 
-  // Otras aplicaciones de la misma chacra, de fondo (p. ej. el producto que se pasó antes).
+  // Otras aplicaciones de la misma chacra, de fondo y a pedido (p. ej. el producto que se pasó antes).
   useEffect(() => {
-    if (!mapa || !app) return
+    if (!mapa || !app || !mostrarAnteriores) return
     let capas: CapaAplicacion[] = []
     let cancelado = false
     ;(async () => {
@@ -180,7 +187,7 @@ export default function AplicacionPage() {
       capas.forEach((c) => c.remove())
       capas = []
     }
-  }, [mapa, app?.id, app?.chacraId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mapa, app?.id, app?.chacraId, mostrarAnteriores]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Esta aplicación.
   useEffect(() => {
@@ -586,6 +593,15 @@ export default function AplicacionPage() {
             aria-label="Guías paralelas"
           >
             Guías
+          </button>
+        )}
+        {!!cantidadAnteriores && (
+          <button
+            className={'pildora' + (mostrarAnteriores ? ' anteriores-activas' : '')}
+            onClick={() => setMostrarAnteriores(!mostrarAnteriores)}
+            aria-label="Mostrar aplicaciones anteriores de la chacra"
+          >
+            Anteriores
           </button>
         )}
         {cobertura && (

@@ -658,6 +658,7 @@ div.item-principal { cursor: default; }
 
 /* ---------- Guías paralelas ---------- */
 
+.pildora.anteriores-activas,
 .pildora.guias-activas { background: #ffffff; box-shadow: 0 0 0 3px #4aa3ff, 0 2px 8px rgb(0 0 0 / 0.35); }
 
 .eleccion-guia { display: flex; flex-direction: column; gap: 8px; }
