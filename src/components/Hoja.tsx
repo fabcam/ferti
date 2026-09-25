@@ -1,4 +1,5 @@
 import { useEffect, type FormEvent, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 interface Props {
   titulo: string
@@ -26,7 +27,8 @@ export default function Hoja({ titulo, abierta, onCerrar, onGuardar, onBorrar, t
     await onGuardar()
   }
 
-  return (
+  // En un portal: así no hereda estilos ni queda debajo de otros elementos (encabezado, botón flotante).
+  return createPortal(
     <div className="hoja-fondo" onClick={onCerrar}>
       <form className="hoja" onClick={(e) => e.stopPropagation()} onSubmit={enviar}>
         <h2>{titulo}</h2>
@@ -46,6 +48,7 @@ export default function Hoja({ titulo, abierta, onCerrar, onGuardar, onBorrar, t
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   )
 }

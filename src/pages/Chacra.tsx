@@ -7,9 +7,11 @@ import Pantalla from '../components/Pantalla'
 import Hoja from '../components/Hoja'
 import Vacio from '../components/Vacio'
 import Mapa from '../components/Mapa'
+import Compartir from '../components/Compartir'
 import { formatearFecha, formatearHa } from '../lib/dispositivo'
 import { CapaAplicacion } from '../lib/aplicacion'
 import { formatearPorcentaje } from '../lib/cobertura'
+import { paqueteChacra } from '../lib/intercambio'
 
 interface NuevaAplicacion {
   productoId?: string
@@ -86,9 +88,12 @@ export default function ChacraPage() {
       subtitulo={chacra.poligono.length >= 3 ? formatearHa(chacra.areaHa) : 'Sin límite marcado'}
       volver={volver}
       acciones={
-        <button className="btn btn-chico" onClick={() => setEditando(chacra)}>
-          Editar
-        </button>
+        <>
+          <Compartir titulo={`Compartir ${chacra.nombre}`} obtener={() => paqueteChacra(id)} className="btn btn-chico" />
+          <button className="btn btn-chico" onClick={() => setEditando(chacra)}>
+            Editar
+          </button>
+        </>
       }
     >
       {chacra.poligono.length >= 3 ? (

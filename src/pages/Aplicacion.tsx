@@ -5,6 +5,8 @@ import L from 'leaflet'
 import { borrarAplicacion, db, type Punto } from '../db'
 import Mapa from '../components/Mapa'
 import Reproductor from '../components/Reproductor'
+import Compartir from '../components/Compartir'
+import { paqueteAplicacion } from '../lib/intercambio'
 import { CapaAplicacion } from '../lib/aplicacion'
 import { Cobertura, formatearPorcentaje, type Resaltado, type ResumenCobertura } from '../lib/cobertura'
 import {
@@ -542,6 +544,7 @@ export default function AplicacionPage() {
             <button className="btn btn-grande" onClick={empezarReproduccion} disabled={puntosRef.current.length < 2}>
               ▶ Reproducir
             </button>
+            <Compartir titulo="Compartir aplicación" obtener={() => paqueteAplicacion(app.id)} className="btn btn-grande" />
             <button className="btn btn-primario btn-grande" onClick={reanudar}>Reanudar</button>
           </div>
         )}

@@ -37,6 +37,7 @@ export default function Inicio() {
       <nav className="accesos">
         <Link to="/productos" className="acceso">Productos</Link>
         <Link to="/equipos" className="acceso">Equipos</Link>
+        <Link to="/importar" className="acceso">Importar</Link>
         <Link to="/ajustes" className="acceso">Ajustes</Link>
       </nav>
 

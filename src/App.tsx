@@ -8,6 +8,7 @@ import AplicacionPage from './pages/Aplicacion'
 import Productos from './pages/Productos'
 import Equipos from './pages/Equipos'
 import Ajustes from './pages/Ajustes'
+import Importar from './pages/Importar'
 
 /** Recrea la pantalla al cambiar el :id, para que no arrastre estado de otra chacra o aplicación. */
 function porId(Pagina: ComponentType) {
@@ -29,6 +30,7 @@ const router = createHashRouter([
   { path: '/productos', element: <Productos /> },
   { path: '/equipos', element: <Equipos /> },
   { path: '/ajustes', element: <Ajustes /> },
+  { path: '/importar', element: <Importar /> },
 ])
 
 export default function App() {

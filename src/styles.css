@@ -96,7 +96,7 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; }
 
 /* ---------- Accesos ---------- */
 
-.accesos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+.accesos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
 
 .acceso {
   display: flex;
@@ -558,3 +558,40 @@ div.item-principal { cursor: default; }
   cursor: pointer;
 }
 .reproductor-info { justify-content: space-between; margin-top: 6px; font-size: 14px; font-variant-numeric: tabular-nums; }
+
+/* ---------- Compartir / importar ---------- */
+
+.barra-acciones { display: flex; gap: 6px; }
+
+.menu { display: flex; flex-direction: column; gap: 10px; }
+.menu h2 { margin-bottom: 6px; }
+.menu-opcion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  background: var(--fondo);
+  text-align: left;
+  cursor: pointer;
+}
+.menu-opcion strong { font-size: 17px; }
+.menu-opcion span { font-size: 14px; color: var(--texto-suave); }
+.menu-opcion:disabled { opacity: 0.5; }
+
+.bloque { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 16px; }
+.bloque h2 { margin: 0; font-size: 19px; }
+.bloque .ayuda { margin: 4px 0 10px; }
+
+.error { color: var(--peligro); font-weight: 600; margin: 10px 0 0; }
+.exito { color: var(--ok); font-weight: 600; margin: 10px 0 0; }
+
+.previa { width: 100%; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--borde); }
+.previa p { margin: 0 0 10px; }
+.previa table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 15px; }
+.previa th { text-align: left; font-weight: 600; padding: 6px 8px 6px 0; white-space: nowrap; }
+.previa td { padding: 6px 0; color: var(--texto-suave); }
+.previa tr + tr { border-top: 1px solid var(--borde); }
