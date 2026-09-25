@@ -79,6 +79,9 @@ export interface TilePack {
   cantidad: number
   bytes: number
   creado: number
+  /** Rectángulo descargado [suroeste, noreste]; se guarda por si después cambia el límite. */
+  limites: [LatLng, LatLng]
+  fallidas: number
 }
 
 export const db = new Dexie('ferti') as Dexie & {
@@ -124,10 +127,9 @@ export async function borrarAplicacion(id: string) {
 export async function borrarChacra(id: string) {
   const apps = await db.aplicaciones.where('chacraId').equals(id).primaryKeys()
   for (const a of apps) await borrarAplicacion(a)
-  await db.transaction('rw', db.chacras, db.tilePacks, async () => {
-    await db.tilePacks.delete(id)
-    await db.chacras.delete(id)
-  })
+  const { borrarMapaChacra } = await import('./lib/teselas')
+  await borrarMapaChacra(id)
+  await db.chacras.delete(id)
 }
 
 export async function borrarProductor(id: string) {

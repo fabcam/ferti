@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import Pantalla from '../components/Pantalla'
+import { db } from '../db'
+import { borrarTodosLosMapas } from '../lib/teselas'
 import {
   esAppInstalada,
   estadoAlmacenamiento,
@@ -13,6 +16,10 @@ type Estado = Awaited<ReturnType<typeof estadoAlmacenamiento>>
 
 export default function Ajustes() {
   const [alm, setAlm] = useState<Estado | null>(null)
+  const mapas = useLiveQuery(async () => {
+    const packs = await db.tilePacks.toArray()
+    return { chacras: packs.length, teselas: await db.tiles.count(), bytes: packs.reduce((n, p) => n + p.bytes, 0) }
+  }, [])
   const refrescar = () => estadoAlmacenamiento().then(setAlm)
   useEffect(() => {
     refrescar()
@@ -51,6 +58,27 @@ export default function Ajustes() {
           Pedir almacenamiento persistente
         </button>
       )}
+      <h2 className="seccion">Mapas sin conexión</h2>
+      {mapas && mapas.chacras > 0 ? (
+        <>
+          <p className="ayuda">
+            {mapas.chacras} chacra(s) con mapa guardado · {mapas.teselas} teselas · ≈ {formatearBytes(mapas.bytes)}
+          </p>
+          <button
+            className="btn btn-peligro"
+            onClick={async () => {
+              if (!confirm('¿Borrar todos los mapas guardados? Los recorridos no se tocan.')) return
+              await borrarTodosLosMapas()
+              refrescar()
+            }}
+          >
+            Borrar todos los mapas
+          </button>
+        </>
+      ) : (
+        <p className="ayuda">Ninguna chacra tiene el mapa descargado. Se descarga desde cada chacra.</p>
+      )}
+
       <p className="ayuda">Versión {__APP_VERSION__}</p>
     </Pantalla>
   )

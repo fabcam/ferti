@@ -1,21 +1,20 @@
 import L from 'leaflet'
 import area from '@turf/area'
 import type { LatLng } from '../db'
+import { CapaSatelital } from './teselas'
+import { ATRIBUCION_SATELITAL, URL_SATELITAL, ZOOM_NATIVO_MAX } from './fuenteSatelital'
 
 // Uruguay, por si todavía no hay ubicación ni límite.
 export const CENTRO_DEFECTO: LatLng = [-32.6, -56.0]
 export const ZOOM_DEFECTO = 7
 export const ZOOM_CHACRA = 17
 
-export const URL_SATELITAL =
-  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-export const ZOOM_NATIVO_MAX = 19
 
 export function crearCapaSatelital() {
-  return L.tileLayer(URL_SATELITAL, {
+  return new CapaSatelital(URL_SATELITAL, {
     maxNativeZoom: ZOOM_NATIVO_MAX,
     maxZoom: 21,
-    attribution: 'Imágenes © Esri, Maxar, Earthstar Geographics',
+    attribution: ATRIBUCION_SATELITAL,
   })
 }
 

@@ -8,6 +8,7 @@ import Hoja from '../components/Hoja'
 import Vacio from '../components/Vacio'
 import Mapa from '../components/Mapa'
 import Compartir from '../components/Compartir'
+import MapaOffline from '../components/MapaOffline'
 import { formatearFecha, formatearHa } from '../lib/dispositivo'
 import { CapaAplicacion } from '../lib/aplicacion'
 import { formatearPorcentaje } from '../lib/cobertura'
@@ -131,6 +132,8 @@ export default function ChacraPage() {
           </Link>
         </section>
       )}
+
+      <MapaOffline chacra={chacra} />
 
       <h2 className="seccion">Aplicaciones</h2>
       {aplicaciones?.length === 0 && <Vacio>Todavía no hay aplicaciones en esta chacra.</Vacio>}
