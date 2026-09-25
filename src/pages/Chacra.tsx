@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
+import L from 'leaflet'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, borrarChacra, type Chacra } from '../db'
 import Pantalla from '../components/Pantalla'
 import Hoja from '../components/Hoja'
 import Vacio from '../components/Vacio'
+import Mapa from '../components/Mapa'
 import { formatearFecha, formatearHa } from '../lib/dispositivo'
 
 export default function ChacraPage() {
@@ -47,9 +49,29 @@ export default function ChacraPage() {
         </button>
       }
     >
-      <section className="tarjeta mapa-pendiente">
-        <p>El mapa y el marcado del límite llegan en la etapa 2.</p>
-      </section>
+      {chacra.poligono.length >= 3 ? (
+        <section className="vista-chacra">
+          <Mapa
+            key={chacra.poligono.join(';')}
+            className="mapa-vista"
+            opciones={{ dragging: false, touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false }}
+            onListo={(map) => {
+              const forma = L.polygon(chacra.poligono, { color: '#ffd21f', weight: 3, fillOpacity: 0.1 }).addTo(map)
+              map.fitBounds(forma.getBounds(), { padding: [16, 16] })
+            }}
+          />
+          <Link to={`/chacra/${id}/limite`} className="btn btn-chico vista-editar">
+            Editar límite
+          </Link>
+        </section>
+      ) : (
+        <section className="tarjeta sin-limite">
+          <p>Esta chacra todavía no tiene el límite marcado.</p>
+          <Link to={`/chacra/${id}/limite`} className="btn btn-primario">
+            Marcar límite
+          </Link>
+        </section>
+      )}
 
       <h2 className="seccion">Aplicaciones</h2>
       {aplicaciones?.length === 0 && <Vacio>Todavía no hay aplicaciones en esta chacra.</Vacio>}
