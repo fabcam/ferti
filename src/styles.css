@@ -508,3 +508,25 @@ div.item-principal { cursor: default; }
   border-bottom: 14px solid #4aa3ff;
   filter: drop-shadow(0 0 1px #fff);
 }
+
+/* ---------- Cobertura ---------- */
+
+.capa-cobertura { image-rendering: pixelated; }
+
+.pildora {
+  min-width: 52px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 20px;
+  border: 0;
+  background: rgb(255 255 255 / 0.95);
+  color: #1d231c;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
+  cursor: pointer;
+}
+.pildora.resaltado-solapes { background: #ff2020; color: #fff; }
+.pildora.resaltado-huecos { background: #ff2d95; color: #fff; }
+
+.dato-solape strong { color: #ff8a80; }

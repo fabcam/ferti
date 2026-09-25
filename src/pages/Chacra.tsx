@@ -9,6 +9,7 @@ import Vacio from '../components/Vacio'
 import Mapa from '../components/Mapa'
 import { formatearFecha, formatearHa } from '../lib/dispositivo'
 import { CapaAplicacion } from '../lib/aplicacion'
+import { formatearPorcentaje } from '../lib/cobertura'
 
 interface NuevaAplicacion {
   productoId?: string
@@ -139,6 +140,12 @@ export default function ChacraPage() {
               <span>
                 {formatearFecha(a.inicio)} · {a.anchoM.toLocaleString('es-UY')} m{a.dosisKgHa ? ` · ${a.dosisKgHa} kg/ha` : ''}
               </span>
+              {a.cobertura && (
+                <span>
+                  <b>{formatearPorcentaje(a.cobertura.porcentaje)} cubierto</b> · {formatearHa(a.cobertura.cubiertaHa)}
+                  {a.cobertura.solapeHa >= 0.01 && ` · ${formatearHa(a.cobertura.solapeHa)} de solape`}
+                </span>
+              )}
             </Link>
           </li>
         ))}

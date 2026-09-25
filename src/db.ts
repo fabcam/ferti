@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
+import type { ResumenCobertura } from './lib/cobertura'
 
 export type LatLng = [number, number]
 
@@ -50,6 +51,8 @@ export interface Aplicacion {
   inicio: number
   fin?: number
   estado: EstadoAplicacion
+  /** Último cálculo de cobertura (para mostrar en listas sin recalcular). */
+  cobertura?: ResumenCobertura
 }
 
 export interface Punto {

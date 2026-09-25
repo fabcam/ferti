@@ -4,9 +4,10 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import L from 'leaflet'
 import { borrarAplicacion, db, type Punto } from '../db'
 import Mapa from '../components/Mapa'
+import { CapaAplicacion } from '../lib/aplicacion'
+import { Cobertura, formatearPorcentaje, type Resaltado, type ResumenCobertura } from '../lib/cobertura'
 import {
   acumular,
-  CapaAplicacion,
   distanciaM,
   DISTANCIA_MIN_M,
   CORTE_MS,
@@ -15,13 +16,19 @@ import {
   resumir,
   RESUMEN_VACIO,
   VELOCIDAD_MAX_MS,
-} from '../lib/aplicacion'
+} from '../lib/recorrido'
 import { mensajeErrorGps } from '../lib/gps'
 import { useWakeLock } from '../lib/wakeLock'
 import { formatearFecha } from '../lib/dispositivo'
 
 const ZOOM_GRABANDO = 18
 const SIN_SENAL_MS = 6_000
+const REFRESCO_RESALTADO_MS = 3_000
+
+const SIGUIENTE_RESALTADO: Record<Resaltado, Resaltado> = { nada: 'solapes', solapes: 'huecos', huecos: 'nada' }
+const TEXTO_RESALTADO: Record<Resaltado, string> = { nada: 'Resaltar', solapes: 'Solapes', huecos: 'Huecos' }
+
+const ha = (n: number) => n.toLocaleString('es-UY', { maximumFractionDigits: n < 10 ? 2 : 1 })
 
 const iconoVehiculo = L.divIcon({
   className: '',
@@ -47,6 +54,8 @@ export default function AplicacionPage() {
   const [errorGps, setErrorGps] = useState<string | null>(null)
   const [siguiendo, setSiguiendo] = useState(true)
   const [ahora, setAhora] = useState(Date.now())
+  const [cobertura, setCobertura] = useState<ResumenCobertura | null>(null)
+  const [resaltado, setResaltado] = useState<Resaltado>('nada')
 
   const { estado: wake, pedir: pedirWakeLock } = useWakeLock(grabando)
 
@@ -55,6 +64,9 @@ export default function AplicacionPage() {
   const esparciendoRef = useRef(false)
   const vehiculoRef = useRef<L.Marker | null>(null)
   const encuadradoRef = useRef(false)
+  const puntosRef = useRef<Punto[]>([])
+  const coberturaRef = useRef<Cobertura | null>(null)
+  const coberturaCambioRef = useRef(false)
 
   const alListo = useCallback((map: L.Map) => {
     setMapa(map)
@@ -110,6 +122,7 @@ export default function AplicacionPage() {
       .then((puntos) => {
         if (cancelado) return
         capa.cargar(puntos)
+        puntosRef.current = puntos
         ultimoRef.current = puntos.at(-1)
         setResumen(resumir(puntos, app.anchoM))
         if (!chacra?.poligono.length && puntos.length && !encuadradoRef.current) {
@@ -125,13 +138,81 @@ export default function AplicacionPage() {
     }
   }, [mapa, app?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Grilla de cobertura: se arma con todo el recorrido y después se actualiza punto a punto.
+  const poligonoClave = chacra?.poligono.join(';')
+  useEffect(() => {
+    if (!cargado || !app || !chacra || chacra.poligono.length < 3) {
+      coberturaRef.current = null
+      setCobertura(null)
+      return
+    }
+    const cob = new Cobertura(chacra.poligono, app.anchoM).cargar(puntosRef.current)
+    coberturaRef.current = cob
+    coberturaCambioRef.current = true
+    const r = cob.resumen()
+    setCobertura(r)
+    // Guardar el resultado para que la lista de la chacra lo muestre sin recalcular.
+    if (JSON.stringify(r) !== JSON.stringify(app.cobertura)) db.aplicaciones.update(app.id, { cobertura: r })
+  }, [cargado, app?.id, app?.anchoM, poligonoClave]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Capa que resalta solapes o huecos.
+  useEffect(() => {
+    if (!mapa || resaltado === 'nada') return
+    const canvas = document.createElement('canvas')
+    let capa: L.ImageOverlay | null = null
+    let url: string | null = null
+    let ocupado = false
+
+    const dibujar = () => {
+      const cob = coberturaRef.current
+      if (!cob || ocupado || !coberturaCambioRef.current) return
+      coberturaCambioRef.current = false
+      ocupado = true
+      cob.dibujar(resaltado, canvas)
+      canvas.toBlob((blob) => {
+        ocupado = false
+        if (!blob) return
+        const anterior = url
+        url = URL.createObjectURL(blob)
+        if (!capa) {
+          capa = L.imageOverlay(url, cob.limites(), { className: 'capa-cobertura', interactive: false }).addTo(mapa)
+        } else {
+          capa.setUrl(url)
+          capa.setBounds(L.latLngBounds(cob.limites()))
+        }
+        if (anterior) setTimeout(() => URL.revokeObjectURL(anterior), 1000)
+      })
+    }
+
+    coberturaCambioRef.current = true
+    dibujar()
+    const t = setInterval(dibujar, REFRESCO_RESALTADO_MS)
+    return () => {
+      clearInterval(t)
+      capa?.remove()
+      if (url) URL.revokeObjectURL(url)
+    }
+  }, [mapa, resaltado, cobertura === null]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const guardarCobertura = async () => {
+    const cob = coberturaRef.current
+    if (app && cob) await db.aplicaciones.update(app.id, { cobertura: cob.resumen() })
+  }
+
   const registrar = useCallback(
     (punto: Punto) => {
       if (!app) return
       const prev = ultimoRef.current
       ultimoRef.current = punto
+      puntosRef.current.push(punto)
       capaRef.current?.agregar(punto)
       setResumen((r) => acumular(r, prev, punto, app.anchoM))
+      const cob = coberturaRef.current
+      if (cob) {
+        cob.agregar(punto)
+        setCobertura(cob.resumen())
+        coberturaCambioRef.current = true
+      }
       db.puntos.add(punto).catch((e) => setErrorGps(`No se pudo guardar: ${(e as Error).message}`))
     },
     [app],
@@ -233,8 +314,9 @@ export default function AplicacionPage() {
     }
   }
 
-  const salir = () => {
+  const salir = async () => {
     if (esparciendo && !confirm('Fuera de esta pantalla no se registra el recorrido. ¿Salir igual?')) return
+    await guardarCobertura()
     navigate(chacra ? `/chacra/${chacra.id}` : '/')
   }
 
@@ -242,6 +324,7 @@ export default function AplicacionPage() {
     if (!app || !confirm('¿Finalizar esta aplicación?')) return
     esparciendoRef.current = false
     setEsparciendo(false)
+    await guardarCobertura()
     await db.aplicaciones.update(app.id, { estado: 'finalizada', fin: Date.now() })
     navigate(`/chacra/${app.chacraId}`)
   }
@@ -262,7 +345,7 @@ export default function AplicacionPage() {
 
   const velocidadKmh =
     pos && pos.coords.speed != null && !Number.isNaN(pos.coords.speed) ? pos.coords.speed * 3.6 : null
-  const kg = app.dosisKgHa ? resumen.haAprox * app.dosisKgHa : null
+  const kg = app.dosisKgHa ? (cobertura ? cobertura.aplicadaHa : resumen.haAprox) * app.dosisKgHa : null
 
   let alerta: string | null = null
   if (grabando) {
@@ -322,6 +405,15 @@ export default function AplicacionPage() {
             ⛶
           </button>
         )}
+        {cobertura && (
+          <button
+            className={'pildora resaltado-' + resaltado}
+            onClick={() => setResaltado(SIGUIENTE_RESALTADO[resaltado])}
+            aria-label="Cambiar resaltado"
+          >
+            {TEXTO_RESALTADO[resaltado]}
+          </button>
+        )}
       </div>
 
       <footer className="editor-panel">
@@ -332,20 +424,33 @@ export default function AplicacionPage() {
               <span>km/h</span>
             </div>
           )}
-          <div>
-            <strong>{resumen.haAprox.toLocaleString('es-UY', { maximumFractionDigits: 2 })}</strong>
-            <span>ha aplicadas*</span>
-          </div>
-          {kg !== null && (
-            <div>
-              <strong>{Math.round(kg).toLocaleString('es-UY')}</strong>
-              <span>kg aprox.</span>
-            </div>
+          {cobertura ? (
+            <>
+              <div>
+                <strong>{formatearPorcentaje(cobertura.porcentaje)}</strong>
+                <span>cubierto</span>
+              </div>
+              <div>
+                <strong>{ha(cobertura.cubiertaHa)}</strong>
+                <span>ha cubiertas</span>
+              </div>
+              <div className={cobertura.solapeHa >= 0.01 ? 'dato-solape' : undefined}>
+                <strong>{ha(cobertura.solapeHa)}</strong>
+                <span>ha solape</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <strong>{ha(resumen.haAprox)}</strong>
+                <span>ha aplicadas*</span>
+              </div>
+              <div>
+                <strong>{formatearDuracion(resumen.tiempoEsparciendoMs)}</strong>
+                <span>esparciendo</span>
+              </div>
+            </>
           )}
-          <div>
-            <strong>{formatearDuracion(resumen.tiempoEsparciendoMs)}</strong>
-            <span>esparciendo</span>
-          </div>
         </div>
 
         {grabando ? (
@@ -363,8 +468,15 @@ export default function AplicacionPage() {
           </div>
         )}
         <p className="nota">
-          * Aproximado, cuenta los solapes.
-          {grabando && pos && ` GPS ±${pos.coords.accuracy.toFixed(0)} m.`}
+          {[
+            kg !== null && `≈ ${Math.round(kg).toLocaleString('es-UY')} kg`,
+            cobertura && `${formatearDuracion(resumen.tiempoEsparciendoMs)} esparciendo`,
+            cobertura && cobertura.fueraHa >= 0.01 && `${ha(cobertura.fueraHa)} ha fuera del límite`,
+            !cobertura && '* Aproximado: sin límite marcado no se calculan solapes',
+            grabando && pos && `GPS ±${pos.coords.accuracy.toFixed(0)} m`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </p>
       </footer>
     </div>
