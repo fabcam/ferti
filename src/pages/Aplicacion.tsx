@@ -23,6 +23,7 @@ import {
 } from '../lib/recorrido'
 import { mensajeErrorGps } from '../lib/gps'
 import { useWakeLock } from '../lib/wakeLock'
+import { avisar } from '../lib/sonido'
 import { formatearFecha } from '../lib/dispositivo'
 
 const ZOOM_GRABANDO = 18
@@ -61,6 +62,7 @@ export default function AplicacionPage() {
   const [cobertura, setCobertura] = useState<ResumenCobertura | null>(null)
   const [resaltado, setResaltado] = useState<Resaltado>('nada')
   const [reproduciendo, setReproduciendo] = useState(false)
+  const [retomadaEnPausa, setRetomadaEnPausa] = useState(false)
 
   const { estado: wake, pedir: pedirWakeLock } = useWakeLock(grabando)
 
@@ -130,6 +132,8 @@ export default function AplicacionPage() {
         capa.cargar(puntos)
         puntosRef.current = puntos
         ultimoRef.current = puntos.at(-1)
+        // Se cerró la app (o se recargó) mientras se esparcía: se retoma en pausa y se avisa.
+        if (app.estado === 'en_curso' && puntos.at(-1)?.esparciendo) setRetomadaEnPausa(true)
         setResumen(resumir(puntos, app.anchoM))
         if (!chacra?.poligono.length && puntos.length && !encuadradoRef.current) {
           mapa.fitBounds(L.latLngBounds(puntos.map((p) => [p.lat, p.lng])), { padding: [30, 30] })
@@ -373,7 +377,8 @@ export default function AplicacionPage() {
     const nuevo = !esparciendoRef.current
     esparciendoRef.current = nuevo
     setEsparciendo(nuevo)
-    navigator.vibrate?.(nuevo ? 80 : [40, 60, 40])
+    setRetomadaEnPausa(false)
+    avisar(nuevo ? 'empezar' : 'pausar')
     // Registrar el cambio en la última posición conocida, para que la franja empiece/termine donde se tocó.
     if (app && pos && Date.now() - pos.timestamp < 5_000 && pos.coords.accuracy <= PRECISION_MAX_M) {
       const t = Math.max(Date.now(), (ultimoRef.current?.t ?? 0) + 1)
@@ -453,7 +458,14 @@ export default function AplicacionPage() {
         )}
       </header>
 
-      {alerta && <div className="alerta">{alerta}</div>}
+      {(alerta || (retomadaEnPausa && !esparciendo)) && (
+        <div className="alertas">
+          {retomadaEnPausa && !esparciendo && (
+            <div className="alerta alerta-info">Se retomó en pausa. Si seguís aplicando, tocá Esparcir.</div>
+          )}
+          {alerta && <div className="alerta">{alerta}</div>}
+        </div>
+      )}
 
       <div className="editor-lateral">
         {grabando && (

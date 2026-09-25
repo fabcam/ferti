@@ -72,13 +72,31 @@ Vite + React + TypeScript · Leaflet · vite-plugin-pwa · Dexie (IndexedDB) · 
 
 ## Etapas
 
-1. Esqueleto: PWA instalable, Dexie, navegación, ABM productores / chacras / productos / equipos.
-2. Chacras: mapa, marcado de límite por GPS o toque, edición y área.
-3. Grabación en vivo: GPS, franja, pausa, Wake Lock, guardado continuo.
-4. Cobertura: grilla, %, solapes por producto, ha, kg.
-5. Historial y reproductor.
-6. Exportar / importar / compartir.
-7. Mapas offline por chacra.
-8. Pulido para el campo y prueba real.
+1. ✅ Esqueleto: PWA instalable, Dexie, navegación, ABM productores / chacras / productos / equipos.
+2. ✅ Chacras: mapa, marcado de límite por GPS o toque, edición y área.
+3. ✅ Grabación en vivo: GPS, franja, pausa, Wake Lock, guardado continuo.
+4. ✅ Cobertura: grilla, %, solapes por aplicación, ha, kg.
+5. ✅ Historial y reproductor.
+6. ✅ Exportar / importar / compartir (+ KML).
+7. ✅ Mapas offline por chacra.
+8. ✅ Pulido para el campo — ⏳ falta la prueba real en el iPhone.
 
-Después: guía de pasadas paralelas (A-B), GPS externo Bluetooth, zonas de exclusión, reporte PDF.
+## Decisiones tomadas en el camino
+
+- **Cobertura con grilla** (celdas de 0,5 m o más, tope 2 M de celdas). Para no contar dos veces la misma
+  pasada, cada celda guarda la distancia recorrida cuando se la cubrió; volver a cubrirla tras recorrer
+  más de max(2 × ancho, 10 m) cuenta como solape. Los solapes se calculan por aplicación.
+- **Teselas en IndexedDB** (no en el cache del service worker): control explícito por chacra y se puede
+  probar sin service worker. La capa busca primero lo guardado.
+- **Relleno de Esri**: donde no hay imagen a un zoom, Esri devuelve siempre la misma imagen gris.
+  Se reconoce por su huella SHA-256, no se guarda y se agranda la tesela del zoom anterior.
+- **Actualización con aviso** (no automática): una recarga en medio de una aplicación la dejaría en pausa
+  con el esparcidor abierto.
+- Al reabrir una aplicación que estaba esparciendo, se retoma **en pausa** y se avisa.
+- iPhone no vibra desde la web: los cambios Esparcir/Pausa se avisan con un pitido.
+
+## Pendiente / ideas
+
+- Probar en el campo: precisión real del GPS del iPhone, que la pantalla no se apague, consumo de batería.
+- GPS externo Bluetooth (Web Bluetooth no está en Safari: evaluar app nativa o Android + tablet).
+- Guía de pasadas paralelas (A-B), zonas de exclusión, reporte PDF.

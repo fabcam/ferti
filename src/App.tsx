@@ -9,6 +9,7 @@ import Productos from './pages/Productos'
 import Equipos from './pages/Equipos'
 import Ajustes from './pages/Ajustes'
 import Importar from './pages/Importar'
+import AvisoActualizacion from './components/AvisoActualizacion'
 
 /** Recrea la pantalla al cambiar el :id, para que no arrastre estado de otra chacra o aplicación. */
 function porId(Pagina: ComponentType) {
@@ -34,5 +35,10 @@ const router = createHashRouter([
 ])
 
 export default function App() {
-  return <RouterProvider router={router} />
+  return (
+    <>
+      <RouterProvider router={router} />
+      <AvisoActualizacion />
+    </>
+  )
 }

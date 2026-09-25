@@ -307,6 +307,7 @@ div.item-principal { cursor: default; }
   z-index: 1000;
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: 10px;
 }
 
@@ -429,12 +430,17 @@ div.item-principal { cursor: default; }
 
 /* ---------- Grabación ---------- */
 
-.alerta {
+.alertas {
   position: absolute;
   top: calc(env(safe-area-inset-top) + 70px);
   left: max(12px, env(safe-area-inset-left));
   right: calc(max(12px, env(safe-area-inset-right)) + 64px);
   z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.alerta {
   padding: 10px 14px;
   border-radius: 12px;
   background: #b3261e;
@@ -604,3 +610,48 @@ div.item-principal { cursor: default; }
 .offline-botones { display: flex; gap: 8px; }
 .offline .progreso { flex-basis: 100%; margin: 0; }
 .offline .error { flex-basis: 100%; margin: 0; font-size: 14px; }
+
+/* ---------- Pulido para el campo ---------- */
+
+.alerta-info { background: #1f5fa8; }
+
+.aviso-version {
+  position: fixed;
+  left: 50%;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 1500;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 24px;
+  background: #1d231c;
+  color: #fff;
+  font-size: 15px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.aviso-version strong { color: #e3b34c; }
+
+/* Celular apaisado en el soporte: el panel pasa a una columna a la derecha y el mapa gana alto. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .editor-barra { right: 300px; padding-top: max(8px, env(safe-area-inset-top)); }
+  .editor-panel {
+    top: 0;
+    left: auto;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) 12px;
+  }
+  .editor-lateral { right: 312px; top: 70px; }
+  .alertas { top: 70px; right: 404px; }
+  .aviso { top: 70px; max-width: calc(100% - 440px); }
+  .datos { flex-wrap: wrap; row-gap: 10px; margin-bottom: 4px; }
+  .datos div { flex: 1 1 40%; }
+  .btn-esparcir { min-height: 88px; white-space: normal; }
+  .editor-botones { flex-wrap: wrap; }
+  .editor-estado { margin-bottom: 4px; }
+}
