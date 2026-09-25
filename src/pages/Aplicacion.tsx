@@ -77,6 +77,7 @@ export default function AplicacionPage() {
   const coberturaRef = useRef<Cobertura | null>(null)
   const coberturaCambioRef = useRef(false)
   const dibujadoRef = useRef(-1) // último índice dibujado durante la reproducción
+  const zoomManejoRef = useRef(false) // ya se acercó al zoom de manejo con la primera lectura
 
   const alListo = useCallback((map: L.Map) => {
     // Las guías van por encima de las franjas pintadas y debajo del vehículo.
@@ -362,10 +363,16 @@ export default function AplicacionPage() {
 
   // Marcador del vehículo mientras se graba.
   useEffect(() => {
-    if (!pos) return
+    if (!pos || !mapa) return
+    const ll: L.LatLngTuple = [pos.coords.latitude, pos.coords.longitude]
+    // Con la primera lectura, acercar al zoom de manejo: ahí se distinguen las guías y la franja.
+    if (siguiendo && !zoomManejoRef.current) {
+      zoomManejoRef.current = true
+      mapa.setView(ll, Math.max(mapa.getZoom(), ZOOM_GRABANDO))
+    }
     const enMovimiento = (pos.coords.speed ?? 0) > 0.5
-    moverVehiculo([pos.coords.latitude, pos.coords.longitude], enMovimiento ? pos.coords.heading : null, siguiendo)
-  }, [pos, siguiendo, moverVehiculo])
+    moverVehiculo(ll, enMovimiento ? pos.coords.heading : null, siguiendo)
+  }, [pos, siguiendo, moverVehiculo, mapa])
 
   useEffect(() => {
     return () => {
@@ -571,7 +578,11 @@ export default function AplicacionPage() {
         {chacra && chacra.poligono.length >= 3 && !reproduciendo && (
           <button
             className={'pildora' + (app.guiaLado != null ? ' guias-activas' : '')}
-            onClick={() => setEligiendoGuia(!eligiendoGuia)}
+            onClick={() => {
+              // Dejar de seguir antes de mostrar los lados, para que el GPS no mueva el mapa al elegir.
+              setSiguiendo(false)
+              setEligiendoGuia(!eligiendoGuia)
+            }}
             aria-label="Guías paralelas"
           >
             Guías

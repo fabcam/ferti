@@ -5,6 +5,8 @@ todos los datos quedan guardados en el dispositivo.
 
 **App:** https://fabcam.github.io/ferti/
 
+**Guía de uso (PDF, con capturas):** [docs/Guia-de-uso-Ferti.pdf](docs/Guia-de-uso-Ferti.pdf)
+
 ## Instalar en el iPhone
 
 1. Abrir el link en **Safari**.
