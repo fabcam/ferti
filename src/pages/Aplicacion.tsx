@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import L from 'leaflet'
 import { borrarAplicacion, db, type Punto } from '../db'
 import Mapa from '../components/Mapa'
+import Reproductor from '../components/Reproductor'
 import { CapaAplicacion } from '../lib/aplicacion'
 import { Cobertura, formatearPorcentaje, type Resaltado, type ResumenCobertura } from '../lib/cobertura'
 import {
@@ -15,6 +16,7 @@ import {
   PRECISION_MAX_M,
   resumir,
   RESUMEN_VACIO,
+  rumboEntre,
   VELOCIDAD_MAX_MS,
 } from '../lib/recorrido'
 import { mensajeErrorGps } from '../lib/gps'
@@ -56,6 +58,7 @@ export default function AplicacionPage() {
   const [ahora, setAhora] = useState(Date.now())
   const [cobertura, setCobertura] = useState<ResumenCobertura | null>(null)
   const [resaltado, setResaltado] = useState<Resaltado>('nada')
+  const [reproduciendo, setReproduciendo] = useState(false)
 
   const { estado: wake, pedir: pedirWakeLock } = useWakeLock(grabando)
 
@@ -67,6 +70,7 @@ export default function AplicacionPage() {
   const puntosRef = useRef<Punto[]>([])
   const coberturaRef = useRef<Cobertura | null>(null)
   const coberturaCambioRef = useRef(false)
+  const dibujadoRef = useRef(-1) // último índice dibujado durante la reproducción
 
   const alListo = useCallback((map: L.Map) => {
     setMapa(map)
@@ -264,27 +268,34 @@ export default function AplicacionPage() {
     return () => clearInterval(t)
   }, [grabando])
 
-  // Marcador del vehículo.
+  const moverVehiculo = useCallback(
+    (ll: L.LatLngTuple, rumbo: number | null | undefined, seguir: boolean) => {
+      if (!mapa) return
+      if (!vehiculoRef.current) {
+        vehiculoRef.current = L.marker(ll, { icon: iconoVehiculo, interactive: false, zIndexOffset: 1000 }).addTo(mapa)
+      } else {
+        vehiculoRef.current.setLatLng(ll)
+      }
+      const flecha = vehiculoRef.current.getElement()?.querySelector<HTMLElement>('.flecha')
+      if (flecha) {
+        const conRumbo = rumbo != null && !Number.isNaN(rumbo)
+        flecha.style.display = conRumbo ? '' : 'none'
+        if (conRumbo) flecha.style.transform = `rotate(${rumbo}deg)`
+      }
+      if (seguir) {
+        if (mapa.getZoom() < ZOOM_GRABANDO - 2) mapa.setView(ll, ZOOM_GRABANDO)
+        else mapa.panTo(ll, { animate: false })
+      }
+    },
+    [mapa],
+  )
+
+  // Marcador del vehículo mientras se graba.
   useEffect(() => {
-    if (!mapa || !pos) return
-    const ll: L.LatLngTuple = [pos.coords.latitude, pos.coords.longitude]
-    if (!vehiculoRef.current) {
-      vehiculoRef.current = L.marker(ll, { icon: iconoVehiculo, interactive: false, zIndexOffset: 1000 }).addTo(mapa)
-    } else {
-      vehiculoRef.current.setLatLng(ll)
-    }
-    const flecha = vehiculoRef.current.getElement()?.querySelector<HTMLElement>('.flecha')
-    const rumbo = pos.coords.heading
-    if (flecha) {
-      const conRumbo = rumbo != null && !Number.isNaN(rumbo) && (pos.coords.speed ?? 0) > 0.5
-      flecha.style.display = conRumbo ? '' : 'none'
-      if (conRumbo) flecha.style.transform = `rotate(${rumbo}deg)`
-    }
-    if (siguiendo) {
-      if (mapa.getZoom() < ZOOM_GRABANDO - 2) mapa.setView(ll, ZOOM_GRABANDO)
-      else mapa.panTo(ll)
-    }
-  }, [mapa, pos, siguiendo])
+    if (!pos) return
+    const enMovimiento = (pos.coords.speed ?? 0) > 0.5
+    moverVehiculo([pos.coords.latitude, pos.coords.longitude], enMovimiento ? pos.coords.heading : null, siguiendo)
+  }, [pos, siguiendo, moverVehiculo])
 
   useEffect(() => {
     return () => {
@@ -292,6 +303,68 @@ export default function AplicacionPage() {
       vehiculoRef.current = null
     }
   }, [mapa])
+
+  // Reproducción: dibuja el recorrido hasta el índice indicado.
+  const mostrarHasta = useCallback(
+    (indice: number) => {
+      const capa = capaRef.current
+      const pts = puntosRef.current
+      if (!capa || !app || !pts.length) return
+      const poligono = chacra && chacra.poligono.length >= 3 ? chacra.poligono : null
+      if (indice < dibujadoRef.current || dibujadoRef.current < 0) {
+        // Hacia atrás (o al empezar): redibujar desde cero.
+        const parte = pts.slice(0, indice + 1)
+        capa.cargar(parte)
+        coberturaRef.current = poligono ? new Cobertura(poligono, app.anchoM).cargar(parte) : null
+        setResumen(resumir(parte, app.anchoM))
+      } else {
+        let r: ReturnType<typeof resumir> | null = null
+        for (let i = dibujadoRef.current + 1; i <= indice; i++) {
+          capa.agregar(pts[i])
+          coberturaRef.current?.agregar(pts[i])
+          r = acumular(r ?? RESUMEN_VACIO, pts[i - 1], pts[i], app.anchoM)
+        }
+        if (r) {
+          const delta = r
+          setResumen((prev) => ({
+            distanciaEsparcidaM: prev.distanciaEsparcidaM + delta.distanciaEsparcidaM,
+            tiempoEsparciendoMs: prev.tiempoEsparciendoMs + delta.tiempoEsparciendoMs,
+            haAprox: prev.haAprox + delta.haAprox,
+          }))
+        }
+      }
+      dibujadoRef.current = indice
+      setCobertura(coberturaRef.current?.resumen() ?? null)
+      coberturaCambioRef.current = true
+      const p = pts[indice]
+      const rumbo = p.rumbo ?? (indice > 0 ? rumboEntre(pts[indice - 1], p) : null)
+      moverVehiculo([p.lat, p.lng], rumbo, siguiendo)
+    },
+    [app, chacra, moverVehiculo, siguiendo],
+  )
+
+  const empezarReproduccion = () => {
+    dibujadoRef.current = -1
+    setSiguiendo(true)
+    setReproduciendo(true)
+  }
+
+  const quitarVehiculo = () => {
+    vehiculoRef.current?.remove()
+    vehiculoRef.current = null
+  }
+
+  const terminarReproduccion = () => {
+    setReproduciendo(false)
+    // Volver a mostrar el recorrido completo.
+    const pts = puntosRef.current
+    dibujadoRef.current = -1
+    if (pts.length) mostrarHasta(pts.length - 1)
+    dibujadoRef.current = -1
+    quitarVehiculo()
+    if (chacra && chacra.poligono.length >= 3) mapa?.fitBounds(L.latLngBounds(chacra.poligono), { padding: [30, 30] })
+    setSiguiendo(false)
+  }
 
   const alternarEsparcir = () => {
     pedirWakeLock()
@@ -462,9 +535,14 @@ export default function AplicacionPage() {
           >
             {esparciendo ? '⏸  Pausar  ·  esparciendo' : '▶  Esparcir'}
           </button>
+        ) : reproduciendo ? (
+          <Reproductor puntos={puntosRef.current} onIndice={mostrarHasta} onCerrar={terminarReproduccion} />
         ) : (
           <div className="editor-botones">
-            <button className="btn btn-primario btn-grande" onClick={reanudar}>Reanudar aplicación</button>
+            <button className="btn btn-grande" onClick={empezarReproduccion} disabled={puntosRef.current.length < 2}>
+              ▶ Reproducir
+            </button>
+            <button className="btn btn-primario btn-grande" onClick={reanudar}>Reanudar</button>
           </div>
         )}
         <p className="nota">

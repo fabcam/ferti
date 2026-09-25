@@ -530,3 +530,31 @@ div.item-principal { cursor: default; }
 .pildora.resaltado-huecos { background: #ff2d95; color: #fff; }
 
 .dato-solape strong { color: #ff8a80; }
+
+/* ---------- Reproductor ---------- */
+
+.reproductor { max-width: 640px; margin: 0 auto; }
+.reproductor-fila { display: flex; align-items: center; gap: 10px; }
+.reproductor-fila input[type='range'] { flex: 1; min-width: 0; height: 44px; accent-color: #e3b34c; }
+.rep-btn {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: #e3b34c;
+  color: #1d231c;
+  font-size: 24px;
+  cursor: pointer;
+}
+.rep-vel, .rep-cerrar {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 20px;
+  background: rgb(255 255 255 / 0.15);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.reproductor-info { justify-content: space-between; margin-top: 6px; font-size: 14px; font-variant-numeric: tabular-nums; }

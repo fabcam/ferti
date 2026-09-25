@@ -19,6 +19,14 @@ export function distanciaM(a: { lat: number; lng: number }, b: { lat: number; ln
   return 2 * R * Math.asin(Math.sqrt(h))
 }
 
+/** Rumbo en grados (0 = norte, sentido horario) de a hacia b. */
+export function rumboEntre(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const rad = Math.PI / 180
+  const y = Math.sin((b.lng - a.lng) * rad) * Math.cos(b.lat * rad)
+  const x = Math.cos(a.lat * rad) * Math.sin(b.lat * rad) - Math.sin(a.lat * rad) * Math.cos(b.lat * rad) * Math.cos((b.lng - a.lng) * rad)
+  return ((Math.atan2(y, x) / rad) + 360) % 360
+}
+
 export interface Resumen {
   distanciaEsparcidaM: number
   tiempoEsparciendoMs: number
